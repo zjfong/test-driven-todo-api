@@ -29,7 +29,7 @@ var todos = [
  */
 
 app.get('/', function homepage (req, res) {
-  res.render('index');
+  res.sendFile(__dirname + '/views/index.html');
 });
 
 
