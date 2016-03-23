@@ -1,91 +1,180 @@
 var request = require('request'),
     expect = require('chai').expect,
+    Q = require('q'),
     base_url = 'http://localhost:3000';
+
+
+var fetcher = (function(request, q) {
+  // This module mostly just ensures the server response is JSON,
+  // and allows for method/promise chaining in the tests
+
+  return {
+    get:  function(action      ){ return fetch("get",   {url: action})             },
+    del:  function(action      ){ return fetch("del",   {url: action})             },
+    post: function(action, data){ return fetch("post",  {url: action, form: data}) },
+    put:  function(action, data){ return fetch("put",   {url: action, form: data}) }
+  };
+
+  ////
+
+  function fetch(method, options){
+    var deferred = Q.defer();
+
+    request[method](options, function(error, response){
+      if(error){
+        return deferred.reject(new Error(error));
+      }
+
+      try {
+        response.json = JSON.parse(response.body);
+        deferred.resolve(response);
+      } catch (e) {
+        deferred.reject(new Error("Response body is the " + typeof(response.body) + " (" + response.body.toString() + ") and not valid JSON"))
+      }
+    });
+
+    return deferred.promise;
+  }
+
+}(request, Q))
+
+
+
+// Utility function
+function fetchAll(){
+  var deferred = Q.defer();
+
+  fetcher
+    .get(base_url + '/api/todos')
+    .then(function(response){
+      var all_todos = response.json.todos;
+      var last_todo = all_todos[all_todos.length - 1];
+      deferred.resolve({
+        all: all_todos,
+        last: last_todo
+      });
+    })
+    .fail(
+      deferred.reject
+    )
+
+  return deferred.promise;
+}
+
+
+/*
+  BEGIN TEST SUITE
+  note: in order to ensure that records are being persisted/deleted correctly
+        on the server, each test uses a before action to hit the `index` route
+        first, and then compares those results to the test results.
+*/
 
 describe('Todos API', function() {
 
   describe('GET /api/todos (index)', function(){
     it('should respond with status 200', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(response.statusCode).to.equal(200);
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function(response){
+          expect(response.statusCode).to.equal(200);
+          done();
+        })
+        .fail(done);
     });
 
     it('should respond with a JSON object', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
-        var data = JSON.parse(body);
-        expect(data).to.be.an("object");
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function(response) {
+          expect(response.json).to.be.an("object");
+          done();
+        })
+        .fail(done);
     });
 
     it('should respond with a JSON object containing a list of todos', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
-        var data = JSON.parse(body);
-        expect(data).to.have.property("todos");
-        expect(data.todos).to.be.an("array");
-        var first_todo = data.todos[0]
-        expect(first_todo).to.have.property("task");
-        expect(first_todo).to.have.property("description");
-        expect(first_todo).to.have.property("_id");
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function (response) {
+          expect(response.json)
+            .to.have.property("todos")
+            .and.be.an("array")
+              .and.have.property(0)
+              .and.have.all.keys(["task", "description", "_id"]);
+
+          done();
+        })
+        .fail(done);
     });
 
     it('todo objects should have properities: _id, description, task', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
-        var data = JSON.parse(body);
-        var first_todo = data.todos[0]
-        expect(first_todo).to.have.property("task");
-        expect(first_todo).to.have.property("description");
-        expect(first_todo).to.have.property("_id");
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function (response) {
+          var first_todo = response.json.todos[0]
+
+          expect(first_todo)
+            .to.have.property("task")
+            .and.to.be.a("string");
+
+          expect(first_todo)
+            .to.have.property("description")
+            .and.to.be.a("string");
+
+          expect(first_todo)
+            .to.have.property("_id")
+            .and.to.be.a("number");
+
+          done();
+        })
+        .fail(done);
     });
   });
 
 
   describe('GET /api/todos/:id (show)', function(){
 
-    var res, data, all_todos, last_todo;
+    var actual_response = {};
+    var db = {};
 
     before(function(done){
-      request(base_url + '/api/todos', function (error, response, body) {
-        all_todos = JSON.parse(body).todos;
-        last_todo = all_todos[all_todos.length - 1];
-        request(base_url + '/api/todos/' + last_todo._id, function (error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          done();
-        });
-      });
+      fetchAll()
+        .then(function(todo){
+          fetcher
+            .get(base_url + '/api/todos/' + todo.last._id)
+            .then(function (response) {
+                actual_response.statusCode = response.statusCode;
+                actual_response.json = response.json;
+                db = todo;
+                done();
+              })
+            .fail(done);
+        })
+        .fail(done);
     });
 
     it('should respond with status 200 - Success', function (done) {
-      expect(res.statusCode).to.equal(200);
+      expect(actual_response.statusCode).to.equal(200);
       done();
     });
 
     it('should respond with JSON', function (done) {
-      expect(data).to.be.an("object");
+      expect(actual_response.json).to.be.an("object");
       done();
     });
 
     it('should fetch one specific todo by _id', function (done) {
-      expect(data).to.have.property("task");
-      expect(data.task).to.equal(last_todo.task);
+      expect(actual_response.json)
+        .to.have.property("task")
+        .and.equal(db.last.task);
 
-      expect(data).to.have.property("description");
-      expect(data.description).to.equal(last_todo.description);
+      expect(actual_response.json)
+        .to.have.property("description")
+        .and.equal(db.last.description);
 
-      expect(data).to.have.property("_id");
-      expect(data._id).to.equal(last_todo._id);
+      expect(actual_response.json)
+        .to.have.property("_id")
+        .and.equal(db.last._id);
 
       done();
     });
@@ -93,194 +182,205 @@ describe('Todos API', function() {
 
   describe('POST /api/todos (create)', function(){
 
-    var res, data;
+    var actual_response = {};
+    var db = {};
     var new_todo = {
-        task: 'Walk Dog',
-        description: 'Take Fluffy for a walk'
+      task: 'Create random task name #' + Math.random(),
+      description: 'Pick a random number, e.g. ' + Math.random()
     };
 
     before(function(done){
-      request.post(
-        {
-          url: base_url + '/api/todos',
-          form: new_todo
-        },
-        function(error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          done();
-        }
-      )
+      fetcher
+        .post(base_url + '/api/todos', new_todo)
+        .then(
+          function(response) {
+            actual_response.statusCode = response.statusCode;
+            actual_response.json = response.json;
+            done();
+          }
+        )
     })
 
 
     it('should respond with status 200 - Success', function (done) {
-      expect(res.statusCode).to.equal(200);
+      expect(actual_response.statusCode).to.equal(200);
       done();
     });
 
     it('should respond with JSON', function (done) {
-      expect(data).to.be.an("object");
+      expect(actual_response.json).to.be.an("object");
       done();
     });
 
     it('should respond with the new todo object', function (done) {
-      expect(data).to.have.property("task");
-      expect(data.task).to.equal(new_todo.task);
+      expect(actual_response.json)
+        .to.have.property("task")
+        .and.equal(new_todo.task);
 
-      expect(data).to.have.property("description");
-      expect(data.description).to.equal(new_todo.description);
+      expect(actual_response.json)
+        .to.have.property("description")
+        .and.to.equal(new_todo.description);
+
       done();
     });
 
     it('should assign an _id to the new todo object', function (done) {
-      expect(data).to.have.property("_id");
+      expect(actual_response.json).to.have.property("_id");
       done();
     });
 
     it('should increment the _id number by one each time a todo is created', function (done) {
-      var previous_id = data._id;
+      var previous_id = actual_response.json._id;
       expect(previous_id).to.be.a("number");
-      request.post(
-        {
-          url: base_url + '/api/todos',
-          form: new_todo // we're creating the same todo again, but the _id should be different this time!
-        },
-        function(error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          expect(data).to.have.property("_id");
-          expect(data._id).to.equal(previous_id + 1);
-          done();
-        }
-      );
+
+      // we're creating the same todo again, but the _id should be different this time!
+      fetcher
+        .post(base_url + '/api/todos', new_todo)
+        .then(
+          function(response) {
+            expect(response.json)
+              .to.have.property("_id")
+              .and.to.be.above(previous_id);
+            done();
+          }
+        )
+        .fail(done)
     });
 
   });
 
   describe('DELETE /api/todos/:id (destroy)', function(){
 
-    var res, data, old_todos, last_todo;
+    var actual_response = {}
+    var db = {};
 
     before(function(done){
-      request(base_url + '/api/todos', function (error, response, body) {
-        old_todos = JSON.parse(body).todos;
-        last_todo = old_todos[old_todos.length - 1];
-        request.del(base_url + '/api/todos/' + last_todo._id, function (error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          done();
-        });
-      });
+      fetchAll()
+        .then(function(todo){
+          fetcher
+            .del(base_url + '/api/todos/' + todo.last._id)
+            .then(function(response) {
+              actual_response.statusCode = response.statusCode;
+              actual_response.json = response.json;
+              db = todo;
+              done();
+            })
+            .fail(done)
+        })
+        .fail(done)
     });
 
-    it('should respond with 200 or 204 on success', function (done) {
-      expect([200,204]).to.include(res.statusCode);
+    it('should respond with 200 or 204 on success', function(done) {
+      expect([200,204]).to.include(actual_response.statusCode);
       done();
     });
 
     it('should delete one specific todo from the list of todos', function (done) {
-      request(base_url + '/api/todos', function(error, get_response, body){
-        var current_todos = JSON.parse(body).todos;
-        expect(current_todos).to.have.length(old_todos.length - 1);
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function(response){
+          var current_todos = response.json.todos;
+          expect(current_todos).to.have.length(db.all.length - 1);
 
-        var todoWasDeleted = !current_todos.some(function (todo) {
-          return todo._id === last_todo._id;
-        });
+          var todoWasDeleted = !current_todos.some(function (todo) {
+            return todo._id === db.last._id;
+          });
 
-        expect(todoWasDeleted).to.be.true;
-        done();
-      })
+          expect(todoWasDeleted).to.be.true;
+          done();
+        })
+      .fail(done)
     });
   });
 
 
   describe('PUT /api/todos/:id (update)', function(){
 
-    var res, data, original_todo;
+    var actual_response = {};
+    var db = {};
     var updated_todo = {
-      task: 'Walk Dog',
-      description: 'Take Spot for a walk'
+      task: 'Return order #' + Math.random(),
+      description: 'Shipping label #' + Math.random()
     };
 
     before(function(done){
-      request(base_url + '/api/todos', function (error, response, body) {
-        var _data = JSON.parse(response.body);
-        var all_todos = _data.todos;
-        original_todo = all_todos[all_todos.length - 1];
+      fetchAll()
+        .then(function(todo){
+          fetcher
+            .put(base_url + '/api/todos/' + todo.last._id, updated_todo)
+            .then(function (response) {
+              actual_response.statusCode = response.statusCode;
+              actual_response.json = response.json;
+              db.original_todo = todo.last;
+              done();
+            })
+            .fail(done);
 
-        request.put(
-          {
-            url: base_url + '/api/todos/' + original_todo._id,
-            form: updated_todo
-          },
-          function (error, response, body) {
-            res = response;
-            try {
-              data = JSON.parse(response.body);
-            } finally {}
-            done();
-          }
-        );
-      });
+        })
+        .fail(done);
     });
 
     it('should respond with status 200 - Success', function (done) {
-      expect(res.statusCode).to.equal(200);
+      expect(actual_response.statusCode).to.equal(200);
       done();
     });
 
     it('should respond with JSON', function (done) {
-      expect(data).to.be.an("object");
+      expect(actual_response.json).to.be.an("object");
       done();
     });
 
     it('should update the properities of one specific todo', function (done) {
-      expect(data).to.have.property("task");
-      expect(data.task).to.equal(updated_todo.task);
+      expect(actual_response.json)
+        .to.have.property("task")
+        .and.to.equal(updated_todo.task);
 
-      expect(data).to.have.property("description");
-      expect(data.description).to.equal(updated_todo.description);
+      expect(actual_response.json)
+        .to.have.property("description")
+        .and.equal(updated_todo.description);
 
-      expect(data).to.have.property("_id");
-      expect(data._id).to.equal(original_todo._id);
+      expect(actual_response.json)
+        .to.have.property("_id")
+        .and.equal(db.original_todo._id);
+
       done();
     });
   });
 
 
   describe('GET /api/todos/search (search)', function(){
+
+    var actual_response = {};
+    var db = {};
+    var new_todo = {
+      task: 'surf ' + Math.random(),
+      description: 'dude... ' + Math.random()
+    };
+
     before(function(done){
-      request.post(
-        {
-          url: base_url + '/api/todos',
-          form: {
-            task: 'surf',
-            description: 'dude...'
-          }
-        },
-        done
-      );
+      fetcher
+        .post(base_url + '/api/todos', new_todo)
+        .then(function(){
+          done()
+        })
+        .fail(done)
     });
 
     it('should list all todos that contain the search term in their title', function(done){
-      request(base_url + '/api/todos/search?q=surf', function(error, response, body){
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
+      fetcher
+        .get(base_url + '/api/todos/search?q=surf')
+        .then(function(response){
 
-        var all_todos = JSON.parse(body).todos;
-        expect(all_todos).to.be.an("array");
+          expect(response.json).to.have.property("todos");
 
-        var last_todo = all_todos[all_todos.length - 1];
-        expect(last_todo.task).to.equal("surf");
+          var all_todos = response.json.todos;
+          expect(all_todos).to.be.an("array");
 
-        done();
-      })
+          var last_todo = all_todos[all_todos.length - 1];
+          expect(last_todo.task).to.equal(new_todo.task);
+          done();
+        })
+        .fail(done);
     });
   });
 });
