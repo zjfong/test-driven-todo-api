@@ -1,5 +1,5 @@
 // wait for DOM to load before running JS
-$(function() {
+$(document).ready(function() {
 
   // base API route
   var baseUrl = '/api/todos';
@@ -31,14 +31,18 @@ $(function() {
   };
 
   // GET all todos on page load
-  $.get(baseUrl, function (data) {
-    console.log(data);
+  $.ajax({
+    method: "GET",
+    url: baseUrl,
+    success: function onIndexSuccess(data) {
+      console.log(data);
 
-    // set `allTodos` to todo data from API
-    allTodos = data.todos;
+      // set `allTodos` to todo data from API
+      allTodos = data.todos;
 
-    // render all todos to view
-    render();
+      // render all todos to view
+      render();
+    }
   });
 
   // listen for submit even on form
@@ -49,14 +53,19 @@ $(function() {
     var newTodo = $(this).serialize();
 
     // POST request to create new todo
-    $.post(baseUrl, newTodo, function (data) {
-      console.log(data);
+    $.ajax({
+      method: "POST",
+      url: baseUrl,
+      data: newTodo,
+      success: function onCreateSuccess(response) {
+        console.log(response);
 
-      // add new todo to `allTodos`
-      allTodos.push(data);
+        // add new todo to `allTodos`
+        allTodos.push(response);
 
-      // render all todos to view
-      render();
+        // render all todos to view
+        render();
+      }
     });
 
     // reset the form
@@ -70,7 +79,7 @@ $(function() {
     // for update: submit event on `.update-todo` form
     .on('submit', '.update-todo', function (event) {
       event.preventDefault();
-      
+
       // find the todo's id (stored in HTML as `data-id`)
       var todoId = $(this).closest('.todo').attr('data-id');
 
@@ -87,7 +96,7 @@ $(function() {
         type: 'PUT',
         url: baseUrl + '/' + todoId,
         data: updatedTodo,
-        success: function(data) {
+        success: function onUpdateSuccess(data) {
           // replace todo to update with newly updated version (data)
           allTodos.splice(allTodos.indexOf(todoToUpdate), 1, data);
 
@@ -96,7 +105,7 @@ $(function() {
         }
       });
     })
-    
+
     // for delete: click event on `.delete-todo` button
     .on('click', '.delete-todo', function (event) {
       event.preventDefault();
@@ -113,7 +122,7 @@ $(function() {
       $.ajax({
         type: 'DELETE',
         url: baseUrl + '/' + todoId,
-        success: function(data) {
+        success: function onDeleteSuccess(data) {
           // remove deleted todo from all todos
           allTodos.splice(allTodos.indexOf(todoToDelete), 1);
 
