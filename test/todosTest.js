@@ -3,6 +3,7 @@ var request = require('request'),
     Q = require('q'),
     base_url = 'http://localhost:3000';
 
+TIMEOUT = 200;
 
 var fetcher = (function(request, q) {
   // This module mostly just ensures the server response is JSON,
@@ -20,6 +21,13 @@ var fetcher = (function(request, q) {
   function fetch(method, options){
     var deferred = Q.defer();
 
+    setTimeout(function(){
+      // Intended to be more intelligible to students than mocha's stock error of
+      //    "Error: timeout of 2000ms exceeded. /
+      //     Ensure the done() callback is being called in this test."
+      deferred.reject(new Error("No Response From Server"))
+    }, TIMEOUT);
+
     request[method](options, function(error, response){
       if(error){
         return deferred.reject(new Error(error));
@@ -32,6 +40,7 @@ var fetcher = (function(request, q) {
         deferred.reject(new Error("Response body is the " + typeof(response.body) + " (" + response.body.toString() + ") and not valid JSON"))
       }
     });
+
 
     return deferred.promise;
   }
@@ -70,6 +79,7 @@ function fetchAll(){
 */
 
 describe('Todos API', function() {
+  // this.timeout(TIMEOUT); // Overriden by timeout error raised in fetcher module
 
   describe('GET /api/todos (index)', function(){
     it('should respond with status 200', function (done) {
@@ -192,13 +202,12 @@ describe('Todos API', function() {
     before(function(done){
       fetcher
         .post(base_url + '/api/todos', new_todo)
-        .then(
-          function(response) {
+        .then(function(response) {
             actual_response.statusCode = response.statusCode;
             actual_response.json = response.json;
             done();
-          }
-        )
+        })
+        .fail(done);
     })
 
 
