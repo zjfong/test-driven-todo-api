@@ -149,13 +149,13 @@ describe('Todos API', function() {
 
     before(function(done){
       fetchAll()
-        .then(function(todo){
+        .then(function(Todo){
           fetcher
-            .get(base_url + '/api/todos/' + todo.last._id)
+            .get(base_url + '/api/todos/' + Todo.last._id)
             .then(function (response) {
                 actual_response.statusCode = response.statusCode;
                 actual_response.json = response.json;
-                db = todo;
+                db = Todo;
                 done();
               })
             .fail(done);
@@ -265,13 +265,13 @@ describe('Todos API', function() {
 
     before(function(done){
       fetchAll()
-        .then(function(todo){
+        .then(function(Todo){
           fetcher
-            .del(base_url + '/api/todos/' + todo.last._id)
+            .del(base_url + '/api/todos/' + Todo.last._id)
             .then(function(response) {
               actual_response.statusCode = response.statusCode;
               actual_response.json = response.json;
-              db = todo;
+              db = Todo;
               done();
             })
             .fail(done)
@@ -289,13 +289,10 @@ describe('Todos API', function() {
         .get(base_url + '/api/todos')
         .then(function(response){
           var current_todos = response.json.todos;
-          expect(current_todos).to.have.length(db.all.length - 1);
+          expect(current_todos)
+            .to.have.length(db.all.length - 1)
+            .and.not.deep.include(db.last);
 
-          var todoWasDeleted = !current_todos.some(function (todo) {
-            return todo._id === db.last._id;
-          });
-
-          expect(todoWasDeleted).to.be.true;
           done();
         })
       .fail(done)
@@ -314,13 +311,13 @@ describe('Todos API', function() {
 
     before(function(done){
       fetchAll()
-        .then(function(todo){
+        .then(function(Todo){
           fetcher
-            .put(base_url + '/api/todos/' + todo.last._id, updated_todo)
+            .put(base_url + '/api/todos/' + Todo.last._id, updated_todo)
             .then(function (response) {
               actual_response.statusCode = response.statusCode;
               actual_response.json = response.json;
-              db.original_todo = todo.last;
+              db.original_todo = Todo.last;
               done();
             })
             .fail(done);
@@ -369,8 +366,12 @@ describe('Todos API', function() {
     before(function(done){
       fetcher
         .post(base_url + '/api/todos', new_todo)
-        .then(function(){
-          done()
+        .then(function(response){
+          fetchAll()
+            .then(function(Todo){
+              db = Todo;
+              done()
+            })
         })
         .fail(done)
     });
@@ -380,13 +381,10 @@ describe('Todos API', function() {
         .get(base_url + '/api/todos/search?q=surf')
         .then(function(response){
 
-          expect(response.json).to.have.property("todos");
-
-          var all_todos = response.json.todos;
-          expect(all_todos).to.be.an("array");
-
-          var last_todo = all_todos[all_todos.length - 1];
-          expect(last_todo.task).to.equal(new_todo.task);
+          expect(response.json)
+            .to.have.property("todos")
+            .and.be.an("array")
+            .and.deep.include(db.last);
           done();
         })
         .fail(done);
