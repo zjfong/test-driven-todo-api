@@ -1,13 +1,15 @@
 var request = require('request'),
     expect = require('chai').expect,
     Q = require('q'),
-    base_url = 'http://localhost:3000';
+    _ = require('underscore');
 
 TIMEOUT = 200;
 
 var fetcher = (function(request, q) {
-  // This module mostly just ensures the server response is JSON,
-  // and allows for method/promise chaining in the tests
+  // This module is a wrapper around the request library.
+  // It permits method/promise chaining in the tests,
+  // and converts server responses to JSON, raising errors
+  // if the request takes too long or is in the wrong format.
 
   return {
     get:  function(action      ){ return fetch("get",   {url: action})             },
@@ -49,19 +51,22 @@ var fetcher = (function(request, q) {
 
 
 
-// Utility function
-function fetchAll(){
+var TodoModel = function(){};
+
+// Utility function to fetch all todos from todos#index
+// and parse out all, last, and random, for use in tests
+TodoModel.prototype.loadAll = function (){
+  var self = this;
   var deferred = Q.defer();
 
   fetcher
     .get(base_url + '/api/todos')
     .then(function(response){
       var all_todos = response.json.todos;
-      var last_todo = all_todos[all_todos.length - 1];
-      deferred.resolve({
-        all: all_todos,
-        last: last_todo
-      });
+      self.all = all_todos
+      self.last = _.last(all_todos)
+      self.random = all_todos[_.random(all_todos.length-1)]
+      deferred.resolve(self);
     })
     .fail(
       deferred.reject
@@ -75,8 +80,10 @@ function fetchAll(){
   BEGIN TEST SUITE
   note: in order to ensure that records are being persisted/deleted correctly
         on the server, each test uses a before action to hit the `index` route
-        first, and then compares those results to the test results.
+        first, and then compares those initial records to the test output.
 */
+
+var base_url = 'http://localhost:3000';
 
 describe('Todos API', function() {
   // this.timeout(TIMEOUT); // Overriden by timeout error raised in fetcher module
@@ -145,17 +152,16 @@ describe('Todos API', function() {
   describe('GET /api/todos/:id (show)', function(){
 
     var actual_response = {};
-    var db = {};
+    var Todo = new TodoModel;
 
     before(function(done){
-      fetchAll()
-        .then(function(Todo){
+      Todo.loadAll()
+        .then(function(){
           fetcher
-            .get(base_url + '/api/todos/' + Todo.last._id)
+            .get(base_url + '/api/todos/' + Todo.random._id)
             .then(function (response) {
                 actual_response.statusCode = response.statusCode;
                 actual_response.json = response.json;
-                db = Todo;
                 done();
               })
             .fail(done);
@@ -176,15 +182,15 @@ describe('Todos API', function() {
     it('should fetch one specific todo by _id', function (done) {
       expect(actual_response.json)
         .to.have.property("task")
-        .and.equal(db.last.task);
+        .and.equal(Todo.random.task);
 
       expect(actual_response.json)
         .to.have.property("description")
-        .and.equal(db.last.description);
+        .and.equal(Todo.random.description);
 
       expect(actual_response.json)
         .to.have.property("_id")
-        .and.equal(db.last._id);
+        .and.equal(Todo.random._id);
 
       done();
     });
@@ -193,10 +199,10 @@ describe('Todos API', function() {
   describe('POST /api/todos (create)', function(){
 
     var actual_response = {};
-    var db = {};
+    var Todo = new TodoModel;
     var new_todo = {
-      task: 'Create random task name #' + Math.random(),
-      description: 'Pick a random number, e.g. ' + Math.random()
+      task: 'Create random task name #' + Math.random,
+      description: 'Pick a random number, e.g. ' + Math.random
     };
 
     before(function(done){
@@ -261,17 +267,16 @@ describe('Todos API', function() {
   describe('DELETE /api/todos/:id (destroy)', function(){
 
     var actual_response = {}
-    var db = {};
+    var Todo = new TodoModel;
 
     before(function(done){
-      fetchAll()
-        .then(function(Todo){
+      Todo.loadAll()
+        .then(function(){
           fetcher
-            .del(base_url + '/api/todos/' + Todo.last._id)
+            .del(base_url + '/api/todos/' + Todo.random._id)
             .then(function(response) {
               actual_response.statusCode = response.statusCode;
               actual_response.json = response.json;
-              db = Todo;
               done();
             })
             .fail(done)
@@ -290,8 +295,8 @@ describe('Todos API', function() {
         .then(function(response){
           var current_todos = response.json.todos;
           expect(current_todos)
-            .to.have.length(db.all.length - 1)
-            .and.not.deep.include(db.last);
+            .to.have.length(Todo.all.length - 1)
+            .and.not.deep.include(Todo.random);
 
           done();
         })
@@ -303,21 +308,21 @@ describe('Todos API', function() {
   describe('PUT /api/todos/:id (update)', function(){
 
     var actual_response = {};
-    var db = {};
+    var Todo = new TodoModel;
     var updated_todo = {
-      task: 'Return order #' + Math.random(),
-      description: 'Shipping label #' + Math.random()
+      task: 'Return order #' + Math.random,
+      description: 'Shipping label #' + Math.random
     };
 
     before(function(done){
-      fetchAll()
-        .then(function(Todo){
+      Todo.loadAll()
+        .then(function(){
           fetcher
-            .put(base_url + '/api/todos/' + Todo.last._id, updated_todo)
+            .put(base_url + '/api/todos/' + Todo.random._id, updated_todo)
             .then(function (response) {
               actual_response.statusCode = response.statusCode;
               actual_response.json = response.json;
-              db.original_todo = Todo.last;
+              Todo.original_todo = Todo.random;
               done();
             })
             .fail(done);
@@ -347,7 +352,7 @@ describe('Todos API', function() {
 
       expect(actual_response.json)
         .to.have.property("_id")
-        .and.equal(db.original_todo._id);
+        .and.equal(Todo.original_todo._id);
 
       done();
     });
@@ -357,19 +362,18 @@ describe('Todos API', function() {
   describe('GET /api/todos/search (search)', function(){
 
     var actual_response = {};
-    var db = {};
+    var Todo = new TodoModel;
     var new_todo = {
-      task: 'surf ' + Math.random(),
-      description: 'dude... ' + Math.random()
+      task: 'surf ' + Math.random,
+      description: 'dude... ' + Math.random
     };
 
     before(function(done){
       fetcher
         .post(base_url + '/api/todos', new_todo)
         .then(function(response){
-          fetchAll()
-            .then(function(Todo){
-              db = Todo;
+          Todo.loadAll()
+            .then(function(){
               done()
             })
         })
@@ -384,7 +388,7 @@ describe('Todos API', function() {
           expect(response.json)
             .to.have.property("todos")
             .and.be.an("array")
-            .and.deep.include(db.last);
+            .and.deep.include(Todo.last);
           done();
         })
         .fail(done);
