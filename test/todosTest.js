@@ -39,7 +39,7 @@ var fetcher = (function(request, q) {
         response.json = JSON.parse(response.body);
         deferred.resolve(response);
       } catch (e) {
-        deferred.reject(new Error("Response body is the " + typeof(response.body) + " (" + response.body.toString() + ") and not valid JSON"))
+        deferred.reject(new Error("Response body is the " + typeof(response.body) + " \"" + response.body.toString() + "\" and not valid JSON"))
       }
     });
 
