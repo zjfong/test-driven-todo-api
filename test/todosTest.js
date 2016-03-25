@@ -65,7 +65,7 @@ TodoModel.prototype.loadAll = function (){
       var all_todos = response.json.todos;
       self.all = all_todos
       self.last = _.last(all_todos)
-      self.random = all_todos[_.random(all_todos.length-1)]
+      self.random = _.sample(all_todos)
       deferred.resolve(self);
     })
     .fail(
@@ -363,35 +363,38 @@ describe('Todos API', function() {
 
     var actual_response = {};
     var Todo = new TodoModel;
-    var new_todo = {
-      task: 'surf ' + Math.random,
+    var search_word = _.sample(["surf", "sperlunk", "ski"])
+    var updated_todo = {
+      task: search_word,
       description: 'dude... ' + Math.random
     };
 
     before(function(done){
-      fetcher
-        .post(base_url + '/api/todos', new_todo)
-        .then(function(response){
-          Todo.loadAll()
-            .then(function(){
-              done()
+      Todo.loadAll()
+        .then(function(){
+          fetcher
+            .put(base_url + '/api/todos/' + Todo.random._id, updated_todo)
+            .then(function(response){
+              Todo.original_todo = response.json;
+              done();
             })
+            .fail(done)
         })
         .fail(done)
     });
 
-    it('should list all todos that contain the search term in their title', function(done){
+    it('should list all todos that contain the search term from the query parameter (e.g. `?q=discover`) in the task field', function(done){
       fetcher
-        .get(base_url + '/api/todos/search?q=surf')
+        .get(base_url + '/api/todos/search?q=' + search_word)
         .then(function(response){
-
           expect(response.json)
             .to.have.property("todos")
             .and.be.an("array")
-            .and.deep.include(Todo.last);
+            .and.deep.include(Todo.original_todo);
           done();
         })
         .fail(done);
     });
+
   });
 });
