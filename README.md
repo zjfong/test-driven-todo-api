@@ -53,29 +53,30 @@ mocha
 By the end of this assignment you'll hopefully see this glorious output:
 
     Todos API
-      GET /api/todos (index)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with a JSON object
-        ✓ should respond with a JSON object containing a list of todos
-        ✓ todo objects should have properities: _id, description, task
-      GET /api/todos/:id (show)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with JSON
-        ✓ should fetch one specific todo by _id
-      POST /api/todos (create)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with JSON
-        ✓ should respond with the new todo object
-        ✓ should assign an _id to the new todo object
-      DELETE /api/todos/:id (destroy)
-        ✓ should respond with 200 or 204 on success
-        ✓ should delete one specific todo from the list of todos
-      PUT /api/todos/:id (update)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with JSON
-        ✓ should update the fields on one specific todo
-      GET /api/todos/search (search)
-        ✓ should list all todos that contain the search term in their title
+       GET /api/todos (index)
+         ✓ should respond with status 200
+         ✓ should respond with a JSON object
+         ✓ should respond with a JSON object containing a list of todos
+         ✓ todo objects should have properities: _id, description, task
+       GET /api/todos/:id (show)
+         ✓ should respond with status 200 - Success
+         ✓ should respond with JSON
+         ✓ should fetch one specific todo by _id
+       POST /api/todos (create)
+         ✓ should respond with status 200 - Success
+         ✓ should respond with JSON
+         ✓ should respond with the new todo object
+         ✓ should assign an _id to the new todo object
+         ✓ should increment the _id number by one each time a todo is created
+       DELETE /api/todos/:id (destroy)
+         ✓ should respond with 200 or 204 on success
+         ✓ should delete one specific todo from the list of todos
+       PUT /api/todos/:id (update)
+         ✓ should respond with status 200 - Success
+         ✓ should respond with JSON
+         ✓ should update the properities of one specific todo
+       GET /api/todos/search (search)
+         ✓ should list all todos that contain the search term from the query parameter (e.g. `?q=discover`) in the task field
 
 But for starters you'll see output that looks like this:
 
