@@ -1,13 +1,15 @@
 # <img src="https://cloud.githubusercontent.com/assets/7833470/10899314/63829980-8188-11e5-8cdd-4ded5bcb6e36.png" height="60"> Todo App - Test Driven RESTful JSON API
 
-By the end of the challenges, **you should have:**
-  * A JSON API with a full set of RESTful routes, so you can CRUD (and search!):
-      - _Create_ a new todo (`todos#create`)
-      - _Read_/fetch a list of todos (`todos#index`)
-      - _Read_/fetch a specific todo by id (`todos#show`)
-      - _Update_ a specific todo by id (`todos#update`)
-      - _Delete_ a specific todo by id (`todos#destroy`)
-      - Bonus: Search for todos by title (`todos#search`)
+By the end of the challenges, **you should have** a JSON API with a full set of RESTful routes:
+
+| RESTful Route             | Description                         |
+| :------------------------ | :---------------------------------- |
+| `POST`   `/todos`         | Create a new todo record ("create") |
+| `GET`    `/todos`         | Fetch a list of todos ("index")     |
+| `GET`    `/todos/10`      | Fetch a specific todo ("show")      |
+| `PUT`    `/todos/11`      | Change a specific todo ("update")   |
+| `DELETE` `/todos/11`      | Remove a specific todo ("destroy")  |
+| `GET`    `/todos/search`  | **Bonus**: Search todos ("search")  |
 
 ## Getting Started
 
@@ -51,29 +53,30 @@ mocha
 By the end of this assignment you'll hopefully see this glorious output:
 
     Todos API
-      GET /api/todos (index)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with a JSON object
-        ✓ should respond with a JSON object containing a list of todos
-        ✓ todo objects should have properities: _id, description, task
-      GET /api/todos/:id (show)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with JSON
-        ✓ should fetch one specific todo by _id
-      POST /api/todos (create)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with JSON
-        ✓ should respond with the new todo object
-        ✓ should assign an _id to the new todo object
-      DELETE /api/todos/:id (destroy)
-        ✓ should respond with 200 or 204 on success
-        ✓ should delete one specific todo from the list of todos
-      PUT /api/todos/:id (update)
-        ✓ should respond with status 200 - Success
-        ✓ should respond with JSON
-        ✓ should update the fields on one specific todo
-      GET /api/todos/search (search)
-        ✓ should list all todos that contain the search term in their title
+       GET /api/todos (index)
+         ✓ should respond with status 200
+         ✓ should respond with a JSON object
+         ✓ should respond with a JSON object containing a list of todos
+         ✓ todo objects should have properities: _id, description, task
+       GET /api/todos/:id (show)
+         ✓ should respond with status 200 - Success
+         ✓ should respond with JSON
+         ✓ should fetch one specific todo by _id
+       POST /api/todos (create)
+         ✓ should respond with status 200 - Success
+         ✓ should respond with JSON
+         ✓ should respond with the new todo object
+         ✓ should assign an _id to the new todo object
+         ✓ should increment the _id number by one each time a todo is created
+       DELETE /api/todos/:id (destroy)
+         ✓ should respond with 200 or 204 on success
+         ✓ should delete one specific todo from the list of todos
+       PUT /api/todos/:id (update)
+         ✓ should respond with status 200 - Success
+         ✓ should respond with JSON
+         ✓ should update the properities of one specific todo
+       GET /api/todos/search (search)
+         ✓ should list all todos that contain the search term from the query parameter (e.g. `?q=discover`) in the task field
 
 But for starters you'll see output that looks like this:
 

@@ -1,91 +1,196 @@
 var request = require('request'),
     expect = require('chai').expect,
-    base_url = 'http://localhost:3000';
+    Q = require('q'),
+    _ = require('underscore');
+
+TIMEOUT = 200;
+
+var fetcher = (function(request, q) {
+  // This module is a wrapper around the request library.
+  // It permits method/promise chaining in the tests,
+  // and converts server responses to JSON, raising errors
+  // if the request takes too long or is in the wrong format.
+
+  return {
+    get:  function(action      ){ return fetch("get",   {url: action})             },
+    del:  function(action      ){ return fetch("del",   {url: action})             },
+    post: function(action, data){ return fetch("post",  {url: action, form: data}) },
+    put:  function(action, data){ return fetch("put",   {url: action, form: data}) }
+  };
+
+  ////
+
+  function fetch(method, options){
+    var deferred = Q.defer();
+
+    setTimeout(function(){
+      // Intended to be more intelligible to students than mocha's stock error of
+      //    "Error: timeout of 2000ms exceeded. /
+      //     Ensure the done() callback is being called in this test."
+      deferred.reject(new Error("No Response From Server"))
+    }, TIMEOUT);
+
+    request[method](options, function(error, response){
+      if(error){
+        return deferred.reject(new Error(error));
+      }
+
+      try {
+        response.json = JSON.parse(response.body);
+        deferred.resolve(response);
+      } catch (e) {
+        deferred.reject(new Error("Response body is the " + typeof(response.body) + " \"" + response.body.toString() + "\" and not valid JSON"))
+      }
+    });
+
+
+    return deferred.promise;
+  }
+
+}(request, Q))
+
+
+
+var TodoModel = function(){};
+
+// Utility function to fetch all todos from todos#index
+// and parse out all, last, and random, for use in tests
+TodoModel.prototype.loadAll = function (){
+  var self = this;
+  var deferred = Q.defer();
+
+  fetcher
+    .get(base_url + '/api/todos')
+    .then(function(response){
+      var all_todos = response.json.todos;
+      self.all = all_todos
+      self.last = _.last(all_todos)
+      self.random = _.sample(all_todos)
+      deferred.resolve(self);
+    })
+    .fail(
+      deferred.reject
+    )
+
+  return deferred.promise;
+}
+
+
+/*
+  BEGIN TEST SUITE
+  note: in order to ensure that records are being persisted/deleted correctly
+        on the server, each test uses a before action to hit the `index` route
+        first, and then compares those initial records to the test output.
+*/
+
+var base_url = 'http://localhost:3000';
 
 describe('Todos API', function() {
+  // this.timeout(TIMEOUT); // Overriden by timeout error raised in fetcher module
 
   describe('GET /api/todos (index)', function(){
     it('should respond with status 200', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(response.statusCode).to.equal(200);
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function(response){
+          expect(response.statusCode).to.equal(200);
+          done();
+        })
+        .fail(done);
     });
 
     it('should respond with a JSON object', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
-        var data = JSON.parse(body);
-        expect(data).to.be.an("object");
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function(response) {
+          expect(response.json).to.be.an("object");
+          done();
+        })
+        .fail(done);
     });
 
     it('should respond with a JSON object containing a list of todos', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
-        var data = JSON.parse(body);
-        expect(data).to.have.property("todos");
-        expect(data.todos).to.be.an("array");
-        var first_todo = data.todos[0]
-        expect(first_todo).to.have.property("task");
-        expect(first_todo).to.have.property("description");
-        expect(first_todo).to.have.property("_id");
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function (response) {
+          expect(response.json)
+            .to.have.property("todos")
+            .and.be.an("array")
+              .and.have.property(0)
+              .and.have.all.keys(["task", "description", "_id"]);
+
+          done();
+        })
+        .fail(done);
     });
 
     it('todo objects should have properities: _id, description, task', function (done) {
-      request(base_url + '/api/todos', function (error, response, body) {
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
-        var data = JSON.parse(body);
-        var first_todo = data.todos[0]
-        expect(first_todo).to.have.property("task");
-        expect(first_todo).to.have.property("description");
-        expect(first_todo).to.have.property("_id");
-        done();
-      });
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function (response) {
+          var first_todo = response.json.todos[0]
+
+          expect(first_todo)
+            .to.have.property("task")
+            .and.to.be.a("string");
+
+          expect(first_todo)
+            .to.have.property("description")
+            .and.to.be.a("string");
+
+          expect(first_todo)
+            .to.have.property("_id")
+            .and.to.be.a("number");
+
+          done();
+        })
+        .fail(done);
     });
   });
 
 
   describe('GET /api/todos/:id (show)', function(){
 
-    var res, data, all_todos, last_todo;
+    var actual_response = {};
+    var Todo = new TodoModel;
 
     before(function(done){
-      request(base_url + '/api/todos', function (error, response, body) {
-        all_todos = JSON.parse(body).todos;
-        last_todo = all_todos[all_todos.length - 1];
-        request(base_url + '/api/todos/' + last_todo._id, function (error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          done();
-        });
-      });
+      Todo.loadAll()
+        .then(function(){
+          fetcher
+            .get(base_url + '/api/todos/' + Todo.random._id)
+            .then(function (response) {
+                actual_response.statusCode = response.statusCode;
+                actual_response.json = response.json;
+                done();
+              })
+            .fail(done);
+        })
+        .fail(done);
     });
 
     it('should respond with status 200 - Success', function (done) {
-      expect(res.statusCode).to.equal(200);
+      expect(actual_response.statusCode).to.equal(200);
       done();
     });
 
     it('should respond with JSON', function (done) {
-      expect(data).to.be.an("object");
+      expect(actual_response.json).to.be.an("object");
       done();
     });
 
     it('should fetch one specific todo by _id', function (done) {
-      expect(data).to.have.property("task");
-      expect(data.task).to.equal(last_todo.task);
+      expect(actual_response.json)
+        .to.have.property("task")
+        .and.equal(Todo.random.task);
 
-      expect(data).to.have.property("description");
-      expect(data.description).to.equal(last_todo.description);
+      expect(actual_response.json)
+        .to.have.property("description")
+        .and.equal(Todo.random.description);
 
-      expect(data).to.have.property("_id");
-      expect(data._id).to.equal(last_todo._id);
+      expect(actual_response.json)
+        .to.have.property("_id")
+        .and.equal(Todo.random._id);
 
       done();
     });
@@ -93,194 +198,203 @@ describe('Todos API', function() {
 
   describe('POST /api/todos (create)', function(){
 
-    var res, data;
+    var actual_response = {};
+    var Todo = new TodoModel;
     var new_todo = {
-        task: 'Walk Dog',
-        description: 'Take Fluffy for a walk'
+      task: 'Create random task name #' + Math.random,
+      description: 'Pick a random number, e.g. ' + Math.random
     };
 
     before(function(done){
-      request.post(
-        {
-          url: base_url + '/api/todos',
-          form: new_todo
-        },
-        function(error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          done();
-        }
-      )
+      fetcher
+        .post(base_url + '/api/todos', new_todo)
+        .then(function(response) {
+            actual_response.statusCode = response.statusCode;
+            actual_response.json = response.json;
+            done();
+        })
+        .fail(done);
     })
 
 
     it('should respond with status 200 - Success', function (done) {
-      expect(res.statusCode).to.equal(200);
+      expect(actual_response.statusCode).to.equal(200);
       done();
     });
 
     it('should respond with JSON', function (done) {
-      expect(data).to.be.an("object");
+      expect(actual_response.json).to.be.an("object");
       done();
     });
 
     it('should respond with the new todo object', function (done) {
-      expect(data).to.have.property("task");
-      expect(data.task).to.equal(new_todo.task);
+      expect(actual_response.json)
+        .to.have.property("task")
+        .and.equal(new_todo.task);
 
-      expect(data).to.have.property("description");
-      expect(data.description).to.equal(new_todo.description);
+      expect(actual_response.json)
+        .to.have.property("description")
+        .and.to.equal(new_todo.description);
+
       done();
     });
 
     it('should assign an _id to the new todo object', function (done) {
-      expect(data).to.have.property("_id");
+      expect(actual_response.json).to.have.property("_id");
       done();
     });
 
     it('should increment the _id number by one each time a todo is created', function (done) {
-      var previous_id = data._id;
+      var previous_id = actual_response.json._id;
       expect(previous_id).to.be.a("number");
-      request.post(
-        {
-          url: base_url + '/api/todos',
-          form: new_todo // we're creating the same todo again, but the _id should be different this time!
-        },
-        function(error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          expect(data).to.have.property("_id");
-          expect(data._id).to.equal(previous_id + 1);
-          done();
-        }
-      );
+
+      // we're creating the same todo again, but the _id should be different this time!
+      fetcher
+        .post(base_url + '/api/todos', new_todo)
+        .then(
+          function(response) {
+            expect(response.json)
+              .to.have.property("_id")
+              .and.to.be.above(previous_id);
+            done();
+          }
+        )
+        .fail(done)
     });
 
   });
 
   describe('DELETE /api/todos/:id (destroy)', function(){
 
-    var res, data, old_todos, last_todo;
+    var actual_response = {}
+    var Todo = new TodoModel;
 
     before(function(done){
-      request(base_url + '/api/todos', function (error, response, body) {
-        old_todos = JSON.parse(body).todos;
-        last_todo = old_todos[old_todos.length - 1];
-        request.del(base_url + '/api/todos/' + last_todo._id, function (error, response, body) {
-          res = response;
-          try {
-            data = JSON.parse(response.body);
-          } finally {}
-          done();
-        });
-      });
+      Todo.loadAll()
+        .then(function(){
+          fetcher
+            .del(base_url + '/api/todos/' + Todo.random._id)
+            .then(function(response) {
+              actual_response.statusCode = response.statusCode;
+              actual_response.json = response.json;
+              done();
+            })
+            .fail(done)
+        })
+        .fail(done)
     });
 
-    it('should respond with 200 or 204 on success', function (done) {
-      expect([200,204]).to.include(res.statusCode);
+    it('should respond with 200 or 204 on success', function(done) {
+      expect([200,204]).to.include(actual_response.statusCode);
       done();
     });
 
     it('should delete one specific todo from the list of todos', function (done) {
-      request(base_url + '/api/todos', function(error, get_response, body){
-        var current_todos = JSON.parse(body).todos;
-        expect(current_todos).to.have.length(old_todos.length - 1);
+      fetcher
+        .get(base_url + '/api/todos')
+        .then(function(response){
+          var current_todos = response.json.todos;
+          expect(current_todos)
+            .to.have.length(Todo.all.length - 1)
+            .and.not.deep.include(Todo.random);
 
-        var todoWasDeleted = !current_todos.some(function (todo) {
-          return todo._id === last_todo._id;
-        });
-
-        expect(todoWasDeleted).to.be.true;
-        done();
-      })
+          done();
+        })
+      .fail(done)
     });
   });
 
 
   describe('PUT /api/todos/:id (update)', function(){
 
-    var res, data, original_todo;
+    var actual_response = {};
+    var Todo = new TodoModel;
     var updated_todo = {
-      task: 'Walk Dog',
-      description: 'Take Spot for a walk'
+      task: 'Return order #' + Math.random,
+      description: 'Shipping label #' + Math.random
     };
 
     before(function(done){
-      request(base_url + '/api/todos', function (error, response, body) {
-        var _data = JSON.parse(response.body);
-        var all_todos = _data.todos;
-        original_todo = all_todos[all_todos.length - 1];
+      Todo.loadAll()
+        .then(function(){
+          fetcher
+            .put(base_url + '/api/todos/' + Todo.random._id, updated_todo)
+            .then(function (response) {
+              actual_response.statusCode = response.statusCode;
+              actual_response.json = response.json;
+              Todo.original_todo = Todo.random;
+              done();
+            })
+            .fail(done);
 
-        request.put(
-          {
-            url: base_url + '/api/todos/' + original_todo._id,
-            form: updated_todo
-          },
-          function (error, response, body) {
-            res = response;
-            try {
-              data = JSON.parse(response.body);
-            } finally {}
-            done();
-          }
-        );
-      });
+        })
+        .fail(done);
     });
 
     it('should respond with status 200 - Success', function (done) {
-      expect(res.statusCode).to.equal(200);
+      expect(actual_response.statusCode).to.equal(200);
       done();
     });
 
     it('should respond with JSON', function (done) {
-      expect(data).to.be.an("object");
+      expect(actual_response.json).to.be.an("object");
       done();
     });
 
     it('should update the properities of one specific todo', function (done) {
-      expect(data).to.have.property("task");
-      expect(data.task).to.equal(updated_todo.task);
+      expect(actual_response.json)
+        .to.have.property("task")
+        .and.to.equal(updated_todo.task);
 
-      expect(data).to.have.property("description");
-      expect(data.description).to.equal(updated_todo.description);
+      expect(actual_response.json)
+        .to.have.property("description")
+        .and.equal(updated_todo.description);
 
-      expect(data).to.have.property("_id");
-      expect(data._id).to.equal(original_todo._id);
+      expect(actual_response.json)
+        .to.have.property("_id")
+        .and.equal(Todo.original_todo._id);
+
       done();
     });
   });
 
 
   describe('GET /api/todos/search (search)', function(){
+
+    var actual_response = {};
+    var Todo = new TodoModel;
+    var search_word = _.sample(["surf", "sperlunk", "ski"])
+    var updated_todo = {
+      task: search_word,
+      description: 'dude... ' + Math.random
+    };
+
     before(function(done){
-      request.post(
-        {
-          url: base_url + '/api/todos',
-          form: {
-            task: 'surf',
-            description: 'dude...'
-          }
-        },
-        done
-      );
+      Todo.loadAll()
+        .then(function(){
+          fetcher
+            .put(base_url + '/api/todos/' + Todo.random._id, updated_todo)
+            .then(function(response){
+              Todo.original_todo = response.json;
+              done();
+            })
+            .fail(done)
+        })
+        .fail(done)
     });
 
-    it('should list all todos that contain the search term in their title', function(done){
-      request(base_url + '/api/todos/search?q=surf', function(error, response, body){
-        expect(function(){ JSON.parse(body); }).to.not.throw(SyntaxError);
-
-        var all_todos = JSON.parse(body).todos;
-        expect(all_todos).to.be.an("array");
-
-        var last_todo = all_todos[all_todos.length - 1];
-        expect(last_todo.task).to.equal("surf");
-
-        done();
-      })
+    it('should list all todos that contain the search term from the query parameter (e.g. `?q=discover`) in the task field', function(done){
+      fetcher
+        .get(base_url + '/api/todos/search?q=' + search_word)
+        .then(function(response){
+          expect(response.json)
+            .to.have.property("todos")
+            .and.be.an("array")
+            .and.deep.include(Todo.original_todo);
+          done();
+        })
+        .fail(done);
     });
+
   });
 });
