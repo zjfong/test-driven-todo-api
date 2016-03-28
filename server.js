@@ -28,7 +28,7 @@ var todos = [
  * HTML Endpoints
  */
 
-app.get('/', function homepage (req, res) {
+app.get('/', function homepage(req, res) {
   res.sendFile(__dirname + '/views/index.html');
 });
 
@@ -43,7 +43,7 @@ app.get('/', function homepage (req, res) {
  * ORDER THAT THE TESTS DICTATE.
  */
 
-app.get('/api/todos/search', function search(req, res){
+app.get('/api/todos/search', function search(req, res) {
   /* This endpoint responds with the search results from the
    * query in the request. COMPLETE THIS ENDPOINT LAST.
    */
@@ -86,5 +86,5 @@ app.delete('/api/todos/:id', function destroy(req, res) {
 
 // listen on port 3000
 app.listen(3000, function() {
-  console.log('server running on localhost://3000');
+  console.log('Server running on http://localhost:3000');
 });
