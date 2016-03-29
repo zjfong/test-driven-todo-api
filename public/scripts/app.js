@@ -19,7 +19,7 @@ $(document).ready(function() {
 
   // helper function to render all todos to view
   // note: we empty and re-render the collection each time our todo data changes
-  var render = function() {
+  function render() {
     // empty existing todos from view
     $todosList.empty();
 
@@ -34,11 +34,11 @@ $(document).ready(function() {
   $.ajax({
     method: "GET",
     url: baseUrl,
-    success: function onIndexSuccess(data) {
-      console.log(data);
+    success: function onIndexSuccess(json) {
+      console.log(json);
 
-      // set `allTodos` to todo data from API
-      allTodos = data.todos;
+      // set `allTodos` to todo data (json.data) from API
+      allTodos = json.todos;
 
       // render all todos to view
       render();
@@ -57,11 +57,11 @@ $(document).ready(function() {
       method: "POST",
       url: baseUrl,
       data: newTodo,
-      success: function onCreateSuccess(response) {
-        console.log(response);
+      success: function onCreateSuccess(json) {
+        console.log(json);
 
         // add new todo to `allTodos`
-        allTodos.push(response);
+        allTodos.push(json);
 
         // render all todos to view
         render();
@@ -85,7 +85,7 @@ $(document).ready(function() {
 
       // find the todo to update by its id
       var todoToUpdate = allTodos.filter(function (todo) {
-        return todo._id == todoId;
+        return todo._id === todoId;
       })[0];
 
       // serialze form data
@@ -96,9 +96,9 @@ $(document).ready(function() {
         type: 'PUT',
         url: baseUrl + '/' + todoId,
         data: updatedTodo,
-        success: function onUpdateSuccess(data) {
-          // replace todo to update with newly updated version (data)
-          allTodos.splice(allTodos.indexOf(todoToUpdate), 1, data);
+        success: function onUpdateSuccess(json) {
+          // replace todo to update with newly updated version (json)
+          allTodos.splice(allTodos.indexOf(todoToUpdate), 1, json);
 
           // render all todos to view
           render();
@@ -115,14 +115,14 @@ $(document).ready(function() {
 
       // find the todo to delete by its id
       var todoToDelete = allTodos.filter(function (todo) {
-        return todo._id == todoId;
+        return todo._id === todoId;
       })[0];
 
       // DELETE request to delete todo
       $.ajax({
         type: 'DELETE',
         url: baseUrl + '/' + todoId,
-        success: function onDeleteSuccess(data) {
+        success: function onDeleteSuccess(json) {
           // remove deleted todo from all todos
           allTodos.splice(allTodos.indexOf(todoToDelete), 1);
 
