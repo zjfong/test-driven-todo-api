@@ -85,7 +85,7 @@ $(document).ready(function() {
 
       // find the todo to update by its id
       var todoToUpdate = allTodos.filter(function (todo) {
-        return todo._id == todoId;
+        return todo._id === todoId;
       })[0];
 
       // serialze form data
@@ -115,7 +115,7 @@ $(document).ready(function() {
 
       // find the todo to delete by its id
       var todoToDelete = allTodos.filter(function (todo) {
-        return todo._id == todoId;
+        return todo._id === todoId;
       })[0];
 
       // DELETE request to delete todo
