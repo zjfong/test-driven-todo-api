@@ -15,9 +15,9 @@ app.use(express.static(__dirname + '/public'));
 
 // our database is an array for now with some hardcoded values
 var todos = [
-  // { _id: 7, task: 'Laundry', description: 'Wash clothes' },
-  // { _id: 27, task: 'Grocery Shopping', description: 'Buy dinner for this week' },
-  // { _id: 44, task: 'Homework', description: 'Make this app super awesome!' }
+  { _id: 7, task: 'Laundry', description: 'Wash clothes' },
+  { _id: 27, task: 'Grocery Shopping', description: 'Buy dinner for this week' },
+  { _id: 44, task: 'Homework', description: 'Make this app super awesome!' }
 ];
 
 /**********
@@ -68,9 +68,9 @@ app.get('/api/todos/:id', function show(req, res) {
   var todoId = parseInt(req.params.id);
 
   // find todo to by its id
-  var foundTodo = todos.filter(function (todo) {
+  var foundTodo = todos.find(function (todo) {
     return todo._id == todoId;
-  })[0];
+  });
 
   // send foundTodo as JSON response
   res.json(foundTodo);
@@ -82,9 +82,9 @@ app.put('/api/todos/:id', function update(req, res) {
   var todoId = parseInt(req.params.id);
 
   // find todo to update by its id
-  var todoToUpdate = todos.filter(function (todo) {
+  var todoToUpdate = todos.find(function (todo) {
     return todo._id == todoId;
-  })[0];
+  });
 
   // update the todo's task
   todoToUpdate.task = req.body.task;
@@ -101,9 +101,9 @@ app.delete('/api/todos/:id', function destroy(req, res) {
   var todoId = parseInt(req.params.id);
 
   // find todo to delete by its id
-  var todoToDelete = todos.filter(function (todo) {
+  var todoToDelete = todos.find(function (todo) {
     return todo._id == todoId;
-  })[0];
+  });
 
   // remove todo from `todos` array
   todos.splice(todos.indexOf(todoToDelete), 1);
