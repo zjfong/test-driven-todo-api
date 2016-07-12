@@ -116,7 +116,7 @@ describe('Todos API', function() {
         .fail(done);
     });
 
-    it('should respond with a JSON object containing a list of todos', function (done) {
+    it('the JSON should have a key "todos" that points to a list (value) of todos', function (done) {
       fetcher
         .get(base_url + '/api/todos')
         .then(function (response) {
