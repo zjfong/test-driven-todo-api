@@ -1,15 +1,15 @@
 # <img src="https://cloud.githubusercontent.com/assets/7833470/10899314/63829980-8188-11e5-8cdd-4ded5bcb6e36.png" height="60"> Todo App - Test Driven RESTful JSON API
 
-By the end of the challenges, **you should have** a JSON API with a full set of RESTful routes:
+By the end of this lab **you will have built** a JSON API with a full set of RESTful endpoints:
 
-| RESTful Route             | Description                         |
-| :------------------------ | :---------------------------------- |
-| `POST`   `/todos`         | Create a new todo record ("create") |
-| `GET`    `/todos`         | Fetch a list of todos ("index")     |
-| `GET`    `/todos/10`      | Fetch a specific todo ("show")      |
-| `PUT`    `/todos/11`      | Change a specific todo ("update")   |
-| `DELETE` `/todos/11`      | Remove a specific todo ("destroy")  |
-| `GET`    `/todos/search`  | **Bonus**: Search todos ("search")  |
+| RESTful Route             | Description                         | Controller |
+| :------------------------ | :---------------------------------- | :--------- |
+| `POST`   `/todos`         | Create a new todo record | create |
+| `GET`    `/todos`         | Fetch a list of todos     | index |
+| `GET`    `/todos/10`      | Fetch one specific todo      | show |
+| `PUT`    `/todos/11`      | Change one specific todo   | update |
+| `DELETE` `/todos/11`      | Remove one specific todo  | destroy |
+| `GET`    `/todos/search`  | **Bonus**: Search todos  | search |
 
 ## Getting Started
 
