@@ -15,9 +15,9 @@ app.use(express.static(__dirname + '/public'));
 
 // our database is an array for now with some hardcoded values
 var todos = [
-  // { _id: 1, task: 'Laundry', description: 'Wash clothes' },
-  // { _id: 2, task: 'Grocery Shopping', description: 'Buy dinner for this week' },
-  // { _id: 3, task: 'Homework', description: 'Make this app super awesome!' }
+  // { _id: 7, task: 'Laundry', description: 'Wash clothes' },
+  // { _id: 27, task: 'Grocery Shopping', description: 'Buy dinner for this week' },
+  // { _id: 44, task: 'Homework', description: 'Make this app super awesome!' }
 ];
 
 /**********

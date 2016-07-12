@@ -37,10 +37,9 @@ var fetcher = (function(request, q) {
 
       try {
         response.json = JSON.parse(response.body);
-        deferred.resolve(response);
-      } catch (e) {
-        deferred.reject(new Error("Response body is the " + typeof(response.body) + " \"" + response.body.toString() + "\" and not valid JSON"))
-      }
+      } finally {}
+
+      deferred.resolve(response);
     });
 
 
@@ -76,6 +75,15 @@ TodoModel.prototype.loadAll = function (){
 }
 
 
+function ensureJSON(response, done){
+  if( typeof(response.json) !== "object" ){
+    done(new Error("Response body is the " + typeof(response.body) + " \"" + response.body.toString() + "\" and not valid JSON"));
+  } else {
+    expect(response.json).to.be.an("object");
+    done();
+  }
+}
+
 /*
   BEGIN TEST SUITE
   note: in order to ensure that records are being persisted/deleted correctly
@@ -103,13 +111,12 @@ describe('Todos API', function() {
       fetcher
         .get(base_url + '/api/todos')
         .then(function(response) {
-          expect(response.json).to.be.an("object");
-          done();
+          ensureJSON(response, done);
         })
         .fail(done);
     });
 
-    it('should respond with a JSON object containing a list of todos', function (done) {
+    it('the JSON should have a key "todos" that points to a list (value) of todos', function (done) {
       fetcher
         .get(base_url + '/api/todos')
         .then(function (response) {
@@ -175,8 +182,7 @@ describe('Todos API', function() {
     });
 
     it('should respond with JSON', function (done) {
-      expect(actual_response.json).to.be.an("object");
-      done();
+      ensureJSON(actual_response, done);
     });
 
     it('should fetch one specific todo by _id', function (done) {
@@ -223,8 +229,7 @@ describe('Todos API', function() {
     });
 
     it('should respond with JSON', function (done) {
-      expect(actual_response.json).to.be.an("object");
-      done();
+      ensureJSON(actual_response, done);
     });
 
     it('should respond with the new todo object', function (done) {
@@ -337,8 +342,7 @@ describe('Todos API', function() {
     });
 
     it('should respond with JSON', function (done) {
-      expect(actual_response.json).to.be.an("object");
-      done();
+      ensureJSON(actual_response, done);
     });
 
     it('should update the properities of one specific todo', function (done) {
