@@ -15,9 +15,9 @@ app.use(express.static(__dirname + '/public'));
 
 // our database is an array for now with some hardcoded values
 var todos = [
-  { _id: 1, task: 'Laundry', description: 'Wash clothes' },
-  { _id: 2, task: 'Grocery Shopping', description: 'Buy dinner for this week' },
-  { _id: 3, task: 'Homework', description: 'Make this app super awesome!' }
+  // { _id: 7, task: 'Laundry', description: 'Wash clothes' },
+  // { _id: 27, task: 'Grocery Shopping', description: 'Buy dinner for this week' },
+  // { _id: 44, task: 'Homework', description: 'Make this app super awesome!' }
 ];
 
 /**********
@@ -92,7 +92,6 @@ app.put('/api/todos/:id', function update(req, res) {
   // update the todo's description
   todoToUpdate.description = req.body.description;
 
-  // send back updated todo
   res.json(todoToUpdate);
 });
 
@@ -112,8 +111,6 @@ app.delete('/api/todos/:id', function destroy(req, res) {
   // send back deleted todo
   res.json(todoToDelete);
 });
-
-
 
 /**********
  * SERVER *
