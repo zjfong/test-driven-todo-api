@@ -84,9 +84,9 @@ $(document).ready(function() {
       var todoId = $(this).closest('.todo').attr('data-id');
 
       // find the todo to update by its id
-      var todoToUpdate = allTodos.filter(function (todo) {
+      var todoToUpdate = allTodos.find(function (todo) {
         return todo._id == todoId;
-      })[0];
+      });
 
       // serialze form data
       var updatedTodo = $(this).serialize();
@@ -114,9 +114,9 @@ $(document).ready(function() {
       var todoId = $(this).closest('.todo').attr('data-id');
 
       // find the todo to delete by its id
-      var todoToDelete = allTodos.filter(function (todo) {
+      var todoToDelete = allTodos.find(function (todo) {
         return todo._id == todoId;
-      })[0];
+      });
 
       // DELETE request to delete todo
       $.ajax({
