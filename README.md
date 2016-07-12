@@ -97,6 +97,55 @@ Why is the server responding with status `404 - Not Found` when we try to `GET /
 
 Take a look at `server.js` and see if you can figure it out!
 
+## Hints
+<details>
+<summary>**How do you find a specific object by `id` in a list of objects?** (Click Here)</summary>
+<br>
+```js
+var fruits = [{name: "apricot"}, {name: "mango"}, {name: "kiwi"}];
+
+// good (ES5 approach)
+var result = fruits.filter(function(f){
+    return f.name === "mango";
+})[0];
+
+// ok (hand-built for loop)
+var result;
+for(var i=0; i<fruits.length-1; i++)
+    if (fruits[i] === "mango"){
+        result = fruits[i];
+        break;
+    }
+});
+
+// best (ES6 approach)
+var result = fruits.find(function(f){
+    return f.name === "mango";
+});
+
+```
+</details>
+
+<details>
+<summary>**How do you grab the last element in an array?** (Click Here)</summary>
+<br>
+```js
+var fruits = [{name: "apricot"}, {name: "mango"}, {name: "kiwi"}];
+var last = fruits[fruits.length-1];
+```
+</details>
+
+<details>
+<summary>**How do you completely remove an element from an array?** (Click Here)</summary>
+<br>
+```js
+var fruits = [{name: "apricot"}, {name: "mango"}, {name: "kiwi"}];
+var apricot_index = 0;
+fruits.slice(apricot_index, 1); // remove 1 element (the apricot), starting at a given index (`0`)
+fruits; //=> [{name: "mango"}, {name: "kiwi"}]
+```
+</details>
+
 ## Bonuses
 1. Build a way for a user to search for todos. You'll need:
     * A new html page called `views/search.html` that's served from your application.
