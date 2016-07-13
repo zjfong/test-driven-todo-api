@@ -13,7 +13,7 @@ By the end of this lab **you will have built** a JSON API with a full set of RES
 
 ## Getting Started
 
-1. Fork this repo, and clone it into your `dev` folder on your local machine.
+1. Clone this repo.
 2. Follow the instructions to setup your test suite (below)
 3. Run the tests, and try to make the _red_ (failing) tests turn _green_ (passing). Then move on to bonuses.
 
