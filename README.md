@@ -104,7 +104,7 @@ Take a look at `server.js` and see if you can figure it out!
 ```js
 var fruits = [{name: "apricot"}, {name: "mango"}, {name: "kiwi"}];
 
-// good (ES5 approach)
+// good
 var result = fruits.filter(function(f){
     return f.name === "mango";
 })[0];
@@ -118,7 +118,7 @@ for(var i=0; i<fruits.length-1; i++)
     }
 });
 
-// best (ES6 approach)
+// best (new in ES6, but we can't use it yet!)
 var result = fruits.find(function(f){
     return f.name === "mango";
 });
