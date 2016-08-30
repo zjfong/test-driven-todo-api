@@ -24,7 +24,7 @@ The tests have already been written for us! Our goal is to try to understand the
 
 The tests will help guide our development process, and keep us focused on our end goal: a RESTful, full-CRUD, JSON API.
 
-#### Test Setup
+#### Setup Your Test Suite
 From inside your cloned directory, run:
 
 ``` bash
@@ -99,15 +99,10 @@ Take a look at `server.js` and see if you can figure it out!
 
 ## Hints
 <details>
-<summary>**How do you find a specific object by `id` in a list of objects?** (Click Here)</summary>
+<summary>**How do you find a specific object by `name` (or `id` or any specific key) in a list of objects?** (Click Here)</summary>
 <br>
 ```js
 var fruits = [{name: "apricot"}, {name: "mango"}, {name: "kiwi"}];
-
-// good
-var result = fruits.filter(function(f){
-    return f.name === "mango";
-})[0];
 
 // ok (hand-built for loop)
 var result;
@@ -117,6 +112,12 @@ for(var i=0; i<fruits.length-1; i++)
         break;
     }
 });
+
+// good
+var result = fruits.filter(function(f){
+    return f.name === "mango";
+})[0];
+
 
 // best (new in ES6, but we can't use it yet!)
 var result = fruits.find(function(f){
@@ -141,7 +142,7 @@ var last = fruits[fruits.length-1];
 ```js
 var fruits = [{name: "apricot"}, {name: "mango"}, {name: "kiwi"}];
 var apricot_index = 0;
-fruits.slice(apricot_index, 1); // remove 1 element (the apricot), starting at a given index (`0`)
+fruits.splice(apricot_index, 1); // remove 1 element (the apricot), starting at a given index (`0`)
 fruits; //=> [{name: "mango"}, {name: "kiwi"}]
 ```
 </details>
